@@ -38,11 +38,11 @@ def extract_text_from_pdf(pdf_path: str) -> List[Dict]:
 
 def extract_text_by_blocks(pdf_path: str) -> List[Dict]:
     """
-    Word-level extractor that sorts text top-to-bottom, left-to-right.
+    Layout-oriented extractor for PDFs that may have multiple columns.
 
-    Useful for multi-column PDFs where default reading order interleaves
-    the two columns. pypdf exposes word-level coordinates via
-    page.extract_words(), which we sort by (y, x) position.
+    pypdf can return text using a layout-preserving strategy.
+    This often improves reading order in multi-column papers compared
+    to the default extraction mode.
 
     Returns:
         List of dicts: [{"page": 1, "text": "...", "source": "file.pdf"}, ...]
@@ -58,15 +58,10 @@ def extract_text_by_blocks(pdf_path: str) -> List[Dict]:
 
         for page_num, page in enumerate(reader.pages, start=1):
             try:
-                words = page.extract_words()
-                # Sort top-to-bottom (round y to 10px rows), then left-to-right
-                words_sorted = sorted(
-                    words,
-                    key=lambda w: (round(float(w["y0"]) / 10), float(w["x0"]))
-                )
-                text = " ".join(w["text"] for w in words_sorted)
+                # Prefer layout-preserving extraction for complex page layouts.
+                text = page.extract_text(extraction_mode="layout") or ""
             except Exception:
-                # Fallback to standard extraction if word-level fails
+                # Fallback to standard extraction if layout mode fails.
                 text = page.extract_text() or ""
 
             pages.append({

@@ -33,7 +33,7 @@ def _split_at_sentences(text: str, max_length: int) -> List[str]:
 
 
 # ── Chunking strategies ────────────────────────────────────────────────────────
-
+# chunk_by_para is the default but if the function is not able to clearly identify para then it falls back on chunk_by_overlap which uses window slide
 def chunk_by_paragraphs(
     pages: List[Dict],
     min_length: int = 100,

@@ -1,17 +1,17 @@
 from pathlib import Path
 from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
-import sys, pypdf
+import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-# ingestion helpers
-
-from src.ingestion.pdf_extractor import extract_text_from_pdf, extract_text_by_blocks
+# ingestion
+from src.ingestion.pdf_extractor import extract_pdf   
 from src.ingestion.text_cleaner import clean_pages
 from src.ingestion.chunker import chunk_by_paragraphs, chunk_with_overlap
+from src.ingestion.embedder import embed_and_store     
 
 
 # STATE - this state is shared across all nodes in the graph. Each node can read and write to this state.
@@ -28,42 +28,59 @@ class AgentState(TypedDict):
 # NODES - these are nodes of the graph, each representing a step in the pipeline. Each node takes the current state as input and returns an updated state.
 
 def ingest_node(state: AgentState) -> dict:
-    """Loads PDFs, extracts text, chunks, embeds into ChromaDB."""
-    print(f"[ingest_node] Received {len(state.get('pdf_paths', []))} PDFs")
-
+    """
+    Stage 1: Load PDFs, detect layout, extract text
+    Stage 2: Clean pages
+    Stage 3: Chunk (paragraph-first, overlap fallback)
+    Stage 4: Embed and store in ChromaDB
+    """
     pdf_paths = state.get("pdf_paths") or []
+    print(f"[ingest_node] Received {len(pdf_paths)} PDF(s)")
+
+    if not pdf_paths:
+        return {"error": "No PDF paths provided."}
+
     all_chunks = []
     next_chunk_id = 0
 
     try:
         for pdf_path in pdf_paths:
+            print(f"[ingest_node] Processing: {pdf_path}")
+
             # Stage 1: layout-aware extraction
-            pages = extract_pages_with_layout_awareness(pdf_path)
+            pages, layout = extract_pdf(pdf_path)
+            print(f"[ingest_node]   → layout={layout}, pages={len(pages)}")
 
-            # Stage 2: cleaning
+            # Stage 2: clean
             cleaned = clean_pages(pages)
+            print(f"[ingest_node]   → cleaned pages={len(cleaned)}")
 
-            # Stage 3: chunking — prefer paragraph chunking, fall back to overlap if empty
+            if not cleaned:
+                print(f"[ingest_node]   ⚠ No content after cleaning, skipping {pdf_path}")
+                continue
+            # Stage 3: chunk
             chunks = chunk_by_paragraphs(cleaned, min_length=100, max_length=1500)
             if not chunks:
+                print(f"[ingest_node]   ⚠ Paragraph chunking produced nothing, falling back to overlap")
                 chunks = chunk_with_overlap(cleaned, chunk_size=512, overlap=64)
-
-            # Reassign chunk ids to be globally unique across all PDFs
+            # Reassign chunk IDs to be globally unique across all PDFs
             for c in chunks:
                 c["chunk_id"] = next_chunk_id
                 next_chunk_id += 1
                 all_chunks.append(c)
-
+            print(f"[ingest_node]   → chunks={len(chunks)}")
         if not all_chunks:
-            return {"error": "Ingestion produced no chunks. Check PDF paths or chunking thresholds."}
+            return {"error": "Ingestion produced no chunks. Check PDF paths or content."}
 
-        print(f"[ingest_node] Produced {len(all_chunks)} chunks")
+        # Stage 4: embed and store
+        print(f"[ingest_node] Total chunks across all PDFs: {len(all_chunks)}")
+        embed_and_store(all_chunks)
+
         return {"chunks": all_chunks}
-
     except Exception as e:
-        # Propagate error into shared agent state for the graph to handle
-        state["error"] = str(e)
-        return {"error": state["error"]}
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
 
 
 def summarise_node(state: AgentState) -> dict:

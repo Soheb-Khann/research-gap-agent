@@ -1,0 +1,1 @@
+"""RAG loop: retrieve from ChromaDB → generate answer via LLM."""

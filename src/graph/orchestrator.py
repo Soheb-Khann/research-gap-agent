@@ -3,8 +3,6 @@ from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
 import sys, pypdf
 
-# Ensure repo root is importable when running as a script:
-#   python src/graph/orchestrator.py
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
@@ -28,105 +26,6 @@ class AgentState(TypedDict):
 
 
 # NODES - these are nodes of the graph, each representing a step in the pipeline. Each node takes the current state as input and returns an updated state.
-
-def is_multi_column_pdf(pdf_path: str, sample_pages: int = 3) -> bool:
-    """
-    Multi-column detector using combined heuristics.
-
-    Strategy:
-    1. Look for indentation patterns (separate left/right content)
-    2. Look for short-line constraints (narrow column width)
-    3. Require BOTH signals to confidently classify as multi-column
-    """
-    path = Path(pdf_path)
-    if not path.exists():
-        raise FileNotFoundError(f"PDF not found: {pdf_path}")
-
-    with open(str(path), "rb") as f:
-        reader = pypdf.PdfReader(f)
-        pages_to_check = min(sample_pages, len(reader.pages))
-
-        indentation_signals = 0
-        short_line_signals = 0
-
-        for page_idx in range(pages_to_check):
-            page = reader.pages[page_idx]
-            
-            try:
-                layout_text = page.extract_text(extraction_mode="layout") or ""
-            except Exception:
-                layout_text = page.extract_text() or ""
-
-            if not layout_text.strip():
-                continue
-
-            lines = layout_text.splitlines()
-            
-            if len(lines) < 10:
-                continue
-
-            # Analyze indentation patterns
-            indents = []
-            for line in lines:
-                if not line.strip():
-                    continue
-                indent = len(line) - len(line.lstrip())
-                indents.append(indent)
-
-            if not indents:
-                continue
-
-            # Analyze short lines (column constraint indicator)
-            non_empty_lines = [ln for ln in lines if ln.strip()]
-            short_lines = sum(1 for ln in non_empty_lines if len(ln.strip()) < 50)
-            short_line_ratio = short_lines / len(non_empty_lines) if non_empty_lines else 0
-
-            # Signal 1: Indentation clustering
-            indent_counts = {}
-            for indent in indents:
-                bin_indent = (indent // 10) * 10
-                indent_counts[bin_indent] = indent_counts.get(bin_indent, 0) + 1
-
-            indent_bins = sorted(indent_counts.keys())
-            
-            # Check for 2 distinct indent clusters with significant separation
-            if len(indent_bins) >= 2:
-                for i in range(len(indent_bins) - 1):
-                    bin1, bin2 = indent_bins[i], indent_bins[i + 1]
-                    count1, count2 = indent_counts[bin1], indent_counts[bin2]
-                    
-                    # Two clusters: enough lines in each, moderate separation
-                    if count1 >= 10 and count2 >= 10 and (bin2 - bin1) >= 15:
-                        indentation_signals += 1
-                        break
-
-            # Signal 2: High short-line ratio (>40%)
-            if short_line_ratio > 0.40:
-                short_line_signals += 1
-            elif short_line_ratio > 0.30:
-                pass  # Near threshold but not quite
-
-
-        # Require either strong indentation or high short-line ratio
-        # Just 1 page with clear pattern is sufficient
-        result = (indentation_signals >= 1) or (short_line_signals >= 1)
-        return result
-
-
-def extract_pages_with_layout_awareness(pdf_path: str) -> List[dict]:
-    """Choose extractor based on detected layout, with fallback for robustness."""
-    multi_column = is_multi_column_pdf(pdf_path)
-
-    if multi_column:
-        print(f"[ingest_node] {pdf_path}: multi-column detected -> block extraction")
-        pages = extract_text_by_blocks(pdf_path)
-        if not pages or not any((p.get("text") or "").strip() for p in pages):
-            print(f"[ingest_node] {pdf_path}: block extraction empty, falling back to default extractor")
-            pages = extract_text_from_pdf(pdf_path)
-        return pages
-
-    print(f"[ingest_node] {pdf_path}: single-column detected -> default extraction")
-    return extract_text_from_pdf(pdf_path)
 
 def ingest_node(state: AgentState) -> dict:
     """Loads PDFs, extracts text, chunks, embeds into ChromaDB."""

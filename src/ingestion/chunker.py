@@ -135,6 +135,7 @@ def chunk_with_overlap(
                 "chunk_id":   chunk_id,
                 "text":       chunk_text,
                 "source":     source,
+                "page":       0,        
                 "char_start": start,
                 "char_end":   end,
                 "char_count": len(chunk_text),

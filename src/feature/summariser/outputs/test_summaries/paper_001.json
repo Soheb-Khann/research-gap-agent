@@ -1,0 +1,29 @@
+{
+  "methodology": "The Naive RAG research paradigm is the earliest methodology. Conducting real-time research by gathering and synthesizing relevant information from multiple sources.",
+  "findings": [
+    "Hallucination in model responses where it produces content not supported by the retrieved context",
+    "Irrelevance in the outputs",
+    "Toxicity in the outputs",
+    "Bias in the outputs",
+    "Effective when iterative refinement significantly enhances response quality",
+    "Especially when clear evaluation criteria exist",
+    "Contemporary evaluation practices of RAG models emphasize three primary quality scores and four essential abilities.",
+    "These collectively inform the evaluation of two principal targets of the RAG model: retrieval and generation.",
+    "Improved Accuracy",
+    "The absence of advanced preprocessing leads to disjointed responses.",
+    "The absence of advanced preprocessing leads to overly generic responses.",
+    "The absence of contextual integration leads to disjointed or overly generic responses."
+  ],
+  "claims": [
+    "Traditional measures do not yet represent a mature or standardized approach for quantifying RAG evaluation aspects",
+    "Custom metrics tailored to the nuances of RAG models have also been developed in some evaluation studies",
+    "Data overlap constitutes an issue",
+    "Potential data overlap compromises outcomes",
+    "Critic module reduces the risk of irrelevant or low-quality data in responses."
+  ],
+  "limitations": [
+    "These metrics, derived from related work, are not yet mature or standardized"
+  ],
+  "paper_id": "paper_001",
+  "title": "Test Paper One"
+}

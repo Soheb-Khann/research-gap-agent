@@ -133,8 +133,8 @@ def analyse_node(state: AgentState) -> dict:
 
 
 def gap_finder_node(state: AgentState) -> dict:
-    """Identifies and ranks research gaps from paper summaries."""
     summaries = state.get("summaries") or []
+    analysis  = state.get("analysis")  or {}   # ← pull analysis from state
 
     if not summaries:
         return {"error": "No summaries in state — cannot run gap agent."}
@@ -142,19 +142,16 @@ def gap_finder_node(state: AgentState) -> dict:
     print(f"[gap_finder_node] Running gap analysis on {len(summaries)} paper summaries")
 
     try:
-        gaps = run_gap_agent(summaries)
-
+        gaps = run_gap_agent(summaries, analysis)   # ← pass it through
         if not gaps:
             return {"error": "Gap agent returned no gaps."}
-
         print(f"[gap_finder_node] Found {len(gaps)} gaps")
         return {"gaps": gaps}
-
     except Exception as e:
         import traceback
         traceback.print_exc()
         return {"error": str(e)}
-
+    
 
 def report_node(state: AgentState) -> dict:
     """Generates the final structured Markdown report."""

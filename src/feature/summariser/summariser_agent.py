@@ -4,26 +4,26 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
 
-from src.ingestion.embedder import retrieve
-
+from src.ingestion.embedder import retrieve, retrieve_by_source
 from src.feature.summariser.prompts import CHUNK_SUMMARY_PROMPT, FINAL_SUMMARY_PROMPT
+
 
 load_dotenv()
 
 llm = ChatGroq(model="llama-3.1-8b-instant")
 
 
-def _get_chunks_for_paper(paper_id: str) -> list[str]:
+def _get_chunks_for_paper(paper_id: str) -> list[dict]:
     """
-    Pulls all chunks for a given paper from ChromaDB.
-    Uses the same retrieve() your rag_agent already uses.
-    We query with a broad prompt to get as many chunks as possible.
+    Pulls chunks for a specific paper using metadata filtering.
+    paper_id must match the 'source' field stored in ChromaDB (i.e. the filename).
     """
-    results = retrieve(
-    query=f"methodology findings results limitations {paper_id}",
-    n_results=20
+    results = retrieve_by_source(
+        source=paper_id,    # e.g. 'retrieval_augmented_generation_for_llm_a_survey.pdf'
+        query="methodology findings results limitations conclusions",
+        n_results=30
     )
-    return results  # list of strings
+    return results
 
 
 def _summarise_chunks(chunks: list[str]) -> list[str]:
@@ -43,12 +43,14 @@ def _consolidate_summaries(partial_summaries: list[str]) -> dict:
     """Reduce step: merge all partial summaries into one structured JSON."""
     combined = "\n\n---\n\n".join(partial_summaries)
     prompt = FINAL_SUMMARY_PROMPT.format(partial_summaries=combined)
-
     response = llm.invoke([HumanMessage(content=prompt)])
     raw = response.content
 
-    # Strip markdown fences if model adds them
+    # Strip markdown fences
     raw = re.sub(r"```json|```", "", raw).strip()
+
+    # Fix trailing commas before ] or } (invalid JSON but common LLM mistake)
+    raw = re.sub(r",\s*([}\]])", r"\1", raw)
 
     return json.loads(raw)
 

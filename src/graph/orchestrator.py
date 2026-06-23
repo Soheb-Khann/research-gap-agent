@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
+# from src.feature.rag.rag_agent import run_rag
 import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -11,7 +12,12 @@ if str(REPO_ROOT) not in sys.path:
 from src.ingestion.pdf_extractor import extract_pdf   
 from src.ingestion.text_cleaner import clean_pages
 from src.ingestion.chunker import chunk_by_paragraphs, chunk_with_overlap
-from src.ingestion.embedder import embed_and_store     
+from src.ingestion.embedder import embed_and_store, list_sources
+
+# agent imports
+from src.feature.summariser.summariser_agent import summarise_paper
+from src.feature.gap.gap_agent import run_gap_agent
+
 
 
 # STATE - this state is shared across all nodes in the graph. Each node can read and write to this state.
@@ -84,10 +90,27 @@ def ingest_node(state: AgentState) -> dict:
 
 
 def summarise_node(state: AgentState) -> dict:
-    """Summarises each paper: methodology, findings, claims, limitations."""
-    print(f"[summarise_node] Summarising {len(state['chunks'])} chunks")
-    # TODO: implement summarisation agent
-    return {"summaries": [{"paper": "paper_1", "summary": "placeholder"}]}
+    """
+    Summarises each paper by retrieving its chunks from ChromaDB by source filename.
+    """
+    chunks = state.get("chunks") or []
+
+    # Get unique source filenames from the chunks stored in state
+    sources = list({c["source"] for c in chunks})
+    print(f"[summarise_node] Summarising {len(sources)} papers: {sources}")
+
+    summaries = []
+    for source in sources:
+        summary = summarise_paper(
+            paper_id=source,               # filename IS the paper_id
+            title=source.replace("_", " ").replace(".pdf", "").title()
+        )
+        summaries.append(summary)
+
+    if not summaries:
+        return {"error": "Summarisation produced no output."}
+
+    return {"summaries": summaries}
 
 
 def analyse_node(state: AgentState) -> dict:
@@ -98,10 +121,27 @@ def analyse_node(state: AgentState) -> dict:
 
 
 def gap_finder_node(state: AgentState) -> dict:
-    """Identifies and ranks research gaps from the analysis."""
-    print(f"[gap_finder_node] Finding gaps from analysis")
-    # TODO: implement gap identification agent
-    return {"gaps": [{"gap": "placeholder gap", "severity": "high"}]}
+    """Identifies and ranks research gaps from paper summaries."""
+    summaries = state.get("summaries") or []
+
+    if not summaries:
+        return {"error": "No summaries in state — cannot run gap agent."}
+
+    print(f"[gap_finder_node] Running gap analysis on {len(summaries)} paper summaries")
+
+    try:
+        gaps = run_gap_agent(summaries)
+
+        if not gaps:
+            return {"error": "Gap agent returned no gaps."}
+
+        print(f"[gap_finder_node] Found {len(gaps)} gaps")
+        return {"gaps": gaps}
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
 
 
 def report_node(state: AgentState) -> dict:

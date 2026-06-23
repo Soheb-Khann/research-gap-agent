@@ -92,9 +92,21 @@ def summarise_node(state: AgentState) -> dict:
 
 def analyse_node(state: AgentState) -> dict:
     """Compares summaries: finds contradictions, agreements, repeated limits."""
-    print(f"[analyse_node] Analysing {len(state['summaries'])} summaries")
-    # TODO: implement cross-paper analysis agent
-    return {"analysis": {"contradictions": [], "agreements": []}}
+    from src.feature.cross_paper.cross_paper_agent import run_cross_paper_agent
+
+    summaries = state.get("summaries", [])
+    print(f"[analyse_node] Analysing {len(summaries)} summaries")
+
+    if len(summaries) < 2:
+        return {"error": f"Need at least 2 paper summaries for cross-paper analysis, got {len(summaries)}."}
+
+    try:
+        result = run_cross_paper_agent(summaries)
+        return {"analysis": result}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": f"Cross-paper agent failed: {e}"}
 
 
 def gap_finder_node(state: AgentState) -> dict:

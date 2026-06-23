@@ -1,0 +1,53 @@
+[
+  {
+    "paper_id": "retrieval_augmented_generation_for_llm_a_survey.pdf",
+    "title": "Retrieval Augmented Generation for LLMs: A Survey",
+    "methodology": "Systematic literature review of RAG architectures across 100+ papers",
+    "findings": [
+      "RAG significantly reduces hallucination in open-domain QA",
+      "Dense retrieval outperforms sparse retrieval on most benchmarks",
+      "Chunk size has significant impact on retrieval quality"
+    ],
+    "claims": [
+      "RAG is more cost-effective than fine-tuning for knowledge-intensive tasks",
+      "Hybrid retrieval combining dense and sparse methods yields best results"
+    ],
+    "limitations": [
+      "Most evaluations are on English-only datasets",
+      "Latency overhead of retrieval not benchmarked consistently",
+      "No unified evaluation framework across studies"
+    ]
+  },
+  {
+    "paper_id": "agentic_retrieval_augmented_generation_a_survey_on_agenetic_rag.pdf",
+    "title": "Agentic RAG: A Survey",
+    "methodology": "Taxonomy-based review of agentic RAG systems with multi-step reasoning",
+    "findings": [
+      "Agentic RAG outperforms naive RAG on multi-hop reasoning tasks",
+      "Tool-use integration improves factual accuracy",
+      "Most agentic systems lack robust error recovery mechanisms"
+    ],
+    "claims": [
+      "Future RAG systems will require planning and self-reflection capabilities",
+      "Single-step retrieval is insufficient for complex queries"
+    ],
+    "limitations": [
+      "Evaluation benchmarks do not capture multi-step reasoning well",
+      "Most datasets used are synthetic",
+      "No cross-paper comparison of agentic architectures"
+    ]
+  },
+  {
+    "paper_id": "tearag_a_token_efficient_agentic_retrieval_augmented_generation_framework.pdf",
+    "title": "TeaRAG: Token Efficient Agentic RAG",
+    "methodology": "Token-budget-aware retrieval framework evaluated on QA benchmarks",
+    "findings": [
+      "Token efficiency can be improved by 40% without accuracy loss",
+      "Selective chunk retrieval reduces noise in context window"
+    ],
+    "claims": [
+      "Token cost is a primary bottleneck in production RAG systems"
+    ],
+    "limitations": null
+  }
+]

@@ -17,7 +17,7 @@ Your job is to identify research gaps across these papers and return them as val
 Do not include any explanation, markdown, or text outside the JSON."""
 
 
-def build_gap_prompt(summaries: List[dict]) -> str:
+def build_gap_prompt(summaries: List[dict], analysis: dict = None) -> str:
     summaries_text = ""
     for s in summaries:
         limitations = s.get("limitations") or ["Not stated"]
@@ -32,10 +32,26 @@ Claims: {json.dumps(claims)}
 Limitations: {json.dumps(limitations)}
 ---"""
 
+    # ── Add cross-paper analysis context if available ─────────────────────────
+    analysis_text = ""
+    if analysis:
+        contradictions = analysis.get("contradictions") or []
+        agreements     = analysis.get("agreements")     or []
+        repeated       = analysis.get("repeated_limitations") or []
+        synthesis      = analysis.get("synthesis_note", "")
+
+        analysis_text = f"""
+Cross-paper analysis findings:
+- Contradictions found: {json.dumps([c.get('topic') for c in contradictions])}
+- Shared agreements: {json.dumps([a.get('shared_claim') for a in agreements])}
+- Repeated limitations across papers: {json.dumps([r.get('limitation_theme') for r in repeated])}
+- Overall synthesis: {synthesis}
+"""
+
     return f"""Here are structured summaries of {len(summaries)} research papers:
 
 {summaries_text}
-
+{analysis_text}
 Identify the most important research gaps across ALL these papers combined.
 Classify each gap into one of these three categories:
 - methodology: gaps in research design, experimental approach, or evaluation methods
@@ -81,7 +97,7 @@ def score_and_rank(gaps: List[dict], total_papers: int) -> List[dict]:
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-def run_gap_agent(summaries: List[dict]) -> List[dict]:
+def run_gap_agent(summaries: List[dict], analysis: dict = None) -> List[dict]:
     """
     Takes List[dict] from summarise_node.
     Each dict must have: paper_id, title, methodology, findings, claims, limitations.
@@ -94,8 +110,9 @@ def run_gap_agent(summaries: List[dict]) -> List[dict]:
     print(f"[gap_agent] Analysing {len(summaries)} summaries...")
 
     llm    = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
-    prompt = build_gap_prompt(summaries)
+    prompt = build_gap_prompt(summaries, analysis)   # ← pass analysis through
     time.sleep(2.5)
+
     response = llm.invoke([
         SystemMessage(content=GAP_SYSTEM_PROMPT),
         HumanMessage(content=prompt)

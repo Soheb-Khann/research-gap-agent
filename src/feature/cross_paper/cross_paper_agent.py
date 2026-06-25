@@ -74,6 +74,7 @@ def run_cross_paper_agent(summaries: list[dict]) -> dict:
 
     # Strip markdown fences if model adds them — same pattern as your summariser
     raw = re.sub(r"```json|```", "", raw).strip()
+    raw = re.sub(r",\s*([}\]])", r"\1", raw)  
 
     result = json.loads(raw)
 

@@ -1,3 +1,5 @@
+import time
+
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
@@ -36,7 +38,7 @@ def run_rag(question: str, n_results: int = 5) -> dict:
     # Step 2: Generate
     llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
     prompt = build_rag_prompt(question, chunks)
-
+    time.sleep(2.5)
     response = llm.invoke([
         SystemMessage(content=RAG_SYSTEM_PROMPT),
         HumanMessage(content=prompt)

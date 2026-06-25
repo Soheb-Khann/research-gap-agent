@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 from dotenv import load_dotenv
@@ -32,6 +33,7 @@ def _summarise_chunks(chunks: list[str]) -> list[str]:
 
     for i, chunk in enumerate(chunks):
         prompt = CHUNK_SUMMARY_PROMPT.format(chunk_text=chunk)
+        time.sleep(2.5)
         response = llm.invoke([HumanMessage(content=prompt)])
         partial_summaries.append(response.content)
         print(f"  [summariser] chunk {i+1}/{len(chunks)} done")
@@ -43,6 +45,7 @@ def _consolidate_summaries(partial_summaries: list[str]) -> dict:
     """Reduce step: merge all partial summaries into one structured JSON."""
     combined = "\n\n---\n\n".join(partial_summaries)
     prompt = FINAL_SUMMARY_PROMPT.format(partial_summaries=combined)
+    time.sleep(2.5)
     response = llm.invoke([HumanMessage(content=prompt)])
     raw = response.content
 

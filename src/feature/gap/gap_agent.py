@@ -1,6 +1,7 @@
 # src/feature/gap/gap_agent.py
 
 import json
+import time
 from typing import List
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -94,7 +95,7 @@ def run_gap_agent(summaries: List[dict]) -> List[dict]:
 
     llm    = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
     prompt = build_gap_prompt(summaries)
-
+    time.sleep(2.5)
     response = llm.invoke([
         SystemMessage(content=GAP_SYSTEM_PROMPT),
         HumanMessage(content=prompt)

@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
@@ -67,6 +68,7 @@ def run_cross_paper_agent(summaries: list[dict]) -> dict:
     prompt = CROSS_PAPER_PROMPT.format(paper_summaries=formatted)
 
     print(f"[cross_paper_agent] Comparing {len(summaries)} papers...")
+    time.sleep(10)
     response = llm.invoke([HumanMessage(content=prompt)])
     raw = response.content
 

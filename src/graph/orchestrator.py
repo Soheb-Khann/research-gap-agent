@@ -17,6 +17,8 @@ from src.ingestion.embedder import embed_and_store, list_sources
 # agent imports
 from src.feature.summariser.summariser_agent import summarise_paper
 from src.feature.gap.gap_agent import run_gap_agent
+from src.feature.report.report_agent import build_report
+
 
 
 
@@ -155,9 +157,19 @@ def gap_finder_node(state: AgentState) -> dict:
 
 def report_node(state: AgentState) -> dict:
     """Generates the final structured Markdown report."""
-    print(f"[report_node] Generating report for {len(state['gaps'])} gaps")
-    # TODO: implement report generator
-    return {"final_report": "# Research Gap Report\n\nPlaceholder."}
+    gaps      = state.get("gaps")      or []
+    summaries = state.get("summaries") or []
+    analysis  = state.get("analysis")  or {}
+
+    print(f"[report_node] Generating report — {len(gaps)} gaps across {len(summaries)} papers")
+
+    try:
+        report = build_report(gaps, summaries, analysis)
+        return {"final_report": report}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"error": str(e)}
 
 
 def error_node(state: AgentState) -> dict:
@@ -256,19 +268,28 @@ def collect_pdfs(args) -> list:
     return pdfs
 
 if __name__ == "__main__":
+    import os
     app = build_graph()
 
-    # Test run with dummy input
     initial_state = {
-        "pdf_paths": collect_pdfs(sys.argv[1:]),
-        "chunks": [],
-        "summaries": [],
-        "analysis": {},
-        "gaps": [],
+        "pdf_paths":    collect_pdfs(sys.argv[1:]),
+        "chunks":       [],
+        "summaries":    [],
+        "analysis":     {},
+        "gaps":         [],
         "final_report": "",
-        "error": ""
+        "error":        ""
     }
 
     result = app.invoke(initial_state)
+
+    report = result.get("final_report", "")
     print("\n── Final Report ──")
-    print(result["final_report"])
+    print(report)
+
+    # Save to disk
+    os.makedirs("outputs", exist_ok=True)
+    out_path = "outputs/report.md"
+    with open(out_path, "w") as f:
+        f.write(report)
+    print(f"\n✅ Report saved to {out_path}")
